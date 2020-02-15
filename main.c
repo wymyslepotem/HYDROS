@@ -49,14 +49,10 @@ DMA_HandleTypeDef hdma_tim4_ch3;
 /* USER CODE BEGIN PV */
 /* Private variables ---------------------------------------------------------*/
 volatile uint16_t Engine = 0; // Wypelnienie sygna³u na silniku
-volatile uint16_t Fans = 0; //Wype³nienie sygna³u PWM na wentylatorach
-uint16_t ADC_Val[3];
-uint8_t Mode1 = 0;
-uint8_t Mode2 = 0;
-const float Supply = 3.0 ; //Zasilanie = 3V
-const float ADC_Resolution = 4096; //Zakres przetwornika
-float voltage_1;
-float voltage_2;
+
+uint8_t Mode1 = 0; //Pe³ny gaz
+uint8_t Mode2 = 0; //Pó³gaz
+
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -124,19 +120,19 @@ void HAL_SYSTICK_Callback(void) {
 	}
 
 	if (Mode1 == 1 && Mode2 == 1) { // Zdejmuje napiêcie z silnika
-		++Przerwania_2;
-		if (Przerwania_2 == 5) {
+		++Przerwania_2;			//Zliczanie przerwañ pó³gazu
+		if (Przerwania_2 == 5) { //Zliczamy 5 przerwañ
 			Przerwania_2 = 0;
-			if (Engine > 50)
-				RisingDown = 1;
-			else if (Engine == 50)
-				RisingDown = 0;
+			if (Engine > 50)	//Je¿eli wype³nienie wiêksze od 50
+				RisingDown = 1; //Flaga zliczania
+			else if (Engine == 50) //Je¿eli wype³nienie = 50
+				RisingDown = 0; //Stop zliczania
 			if (RisingDown == 1)
-				--Engine;
+				--Engine; //Zdejmowanie wype³nienia z silnika
 		}
 	}
 
-	if (Mode1 == 0)
+	if (Mode1 == 0) //Je¿eli DM Button = 0 Silnik nie startuje
 		Engine = 0;
 }
 //Softstart - koniec
@@ -172,9 +168,9 @@ int main(void)
   MX_TIM3_Init();
 
   /* USER CODE BEGIN 2 */
-	HAL_ADC_Start_DMA(&hadc1, ADC_Val, 3);
+
 	HAL_TIM_PWM_Start_DMA(&htim4, TIM_CHANNEL_3, &Engine, 1);
-	HAL_TIM_PWM_Start_DMA(&htim3, TIM_CHANNEL_2, &Fans, 1);
+
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -183,28 +179,19 @@ int main(void)
 		// OBS£UGA PRZYCISKÓW PRZEZ PULLING - POCZ¥TEK
 		if (HAL_GPIO_ReadPin(Button_1_GPIO_Port, Button_1_Pin) == GPIO_PIN_RESET
 				&& Mode2 == 0)
-			Mode1 = 1;
+			Mode1 = 1; //Mode 1 daje wype³nienie 100%
 		if (HAL_GPIO_ReadPin(Button_1_GPIO_Port, Button_1_Pin) == GPIO_PIN_SET
 				&& Mode1 == 1)
 			Mode1 = 0;
 		if (HAL_GPIO_ReadPin(Button_2_GPIO_Port, Button_2_Pin) == GPIO_PIN_RESET
 				&& Mode1 == 1)
-			Mode2 = 1;
+			Mode2 = 1; //Mode 2 daje wype³nienie 50%
 		if (HAL_GPIO_ReadPin(Button_2_GPIO_Port, Button_2_Pin) == GPIO_PIN_SET
 				&& Mode2 == 1)
 			Mode2 = 0;
 		//OBS£UGA PRZYCISKÓW PRZEZ PULLING - KONIEC
 
-		//POMIARY NAPIÊÆ - START
 
-		//POMIARY NAPIÊÆ - KONIEC
-
-		// REGULATOR - POCZ¥TEK
-		if(ADC_Val[0] < 300)
-			Fans = 100;
-		if(ADC_Val[0] > 300)
-			Fans = 10;
-		//REGULATOR - KONIEC
 
   /* USER CODE END WHILE */
 
